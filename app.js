@@ -27,6 +27,7 @@ app.get('/', (req, res) => {
 
 
     var roads = {};
+    var regions = [];
     var promises = [];
     console.log(distance)
     console.log(process.env.GEONAMES_USERNAME)
@@ -44,10 +45,12 @@ app.get('/', (req, res) => {
           method: "get",
           url: url,
         }).then((response) => {
-          console.log(response.data)
           if (response.data.streetSegment != null && response.data.streetSegment != undefined) {
             for (var j = 0; j < response.data.streetSegment.length; j++) {
               exists = false;
+              if (regions.indexOf(response.data.streetSegment[j].placename) == -1) {
+                regions.push(response.data.streetSegment[j].placename);
+              }
               for (var name in roads) { // simply iterate over the keys in the first object
                   if (Object.hasOwnProperty.call(response.data.streetSegment[j].name, name)) { // and check if the key is in the other object, too
                       exists = true;
@@ -65,7 +68,7 @@ app.get('/', (req, res) => {
       )
     }
 
-    Promise.all(promises).then(() => res.send(roads));
+    Promise.all(promises).then(() => res.send({regions: regions, roads: roads}));
 
 
 
