@@ -1,27 +1,52 @@
 const dummyStreets = [
-    { name: 'Street A', latitude: 40.7128, longitude: -74.0060, crimes: { robbery: 0.15, murder: 0.03, assault: 0.08, theft: 0.25 } },
-    { name: 'Street B', latitude: 40.7135, longitude: -74.0055, crimes: { robbery: 0.10, murder: 0.01, assault: 0.05, theft: 0.20 } },
-    { name: 'Street C', latitude: 40.7142, longitude: -74.0048, crimes: { robbery: 0.25, murder: 0.07, assault: 0.18, theft: 0.35 } },
-    { name: 'Street D', latitude: 40.7150, longitude: -74.0039, crimes: { robbery: 0.05, murder: 0.02, assault: 0.03, theft: 0.15 } },
-    { name: 'Street E', latitude: 40.7160, longitude: -74.0025, crimes: { robbery: 0.12, murder: 0.05, assault: 0.10, theft: 0.22 } },
-    { name: 'Street F', latitude: 40.7172, longitude: -74.0018, crimes: { robbery: 0.08, murder: 0.02, assault: 0.06, theft: 0.18 } },
-    { name: 'Street G', latitude: 40.7185, longitude: -74.0005, crimes: { robbery: 0.18, murder: 0.06, assault: 0.12, theft: 0.30 } },
-    { name: 'Street H', latitude: 40.7195, longitude: -73.9998, crimes: { robbery: 0.09, murder: 0.04, assault: 0.07, theft: 0.20 } },
+    {
+        coordinates: [[-74.0060, 40.7128], [-74.0055, 40.7135], [-74.0048, 40.7142]], // Street A
+        crimes: { robbery: 0.15, murder: 0.03, assault: 0.08, theft: 0.25 }
+    },
+    {
+        coordinates: [[-74.0048, 40.7142], [-74.0039, 40.7150], [-74.0025, 40.7160]], // Street B
+        crimes: { robbery: 0.10, murder: 0.01, assault: 0.05, theft: 0.20 }
+    },
+    {
+        coordinates: [[-74.0025, 40.7160], [-74.0018, 40.7172], [-74.0005, 40.7185]], // Street C
+        crimes: { robbery: 0.25, murder: 0.07, assault: 0.18, theft: 0.35 }
+    },
+    {
+        coordinates: [[-74.0060, 40.7128], [-74.0039, 40.7150]], // Street D (short road)
+        crimes: { robbery: 0.05, murder: 0.02, assault: 0.03, theft: 0.15 }
+    },
+    {
+        coordinates: [[-74.0005, 40.7185], [-73.9998, 40.7195]], // Street E
+        crimes: { robbery: 0.12, murder: 0.05, assault: 0.10, theft: 0.22 }
+    }
 ];
 
-// Multiple path options (some indirect, some direct)
-const streetConnections = [
-    ['Street A', 'Street B'],
-    ['Street A', 'Street C'],
-    ['Street B', 'Street D'],
-    ['Street C', 'Street D'],
-    ['Street C', 'Street E'],
-    ['Street D', 'Street F'],
-    ['Street E', 'Street F'],
-    ['Street F', 'Street G'],
-    ['Street E', 'Street G'],
-    ['Street G', 'Street H'],
-];
+// Detect street intersections dynamically
+function findIntersections(streets) {
+    const intersections = [];
+
+    for (let i = 0; i < streets.length; i++) {
+        for (let j = i + 1; j < streets.length; j++) {
+            const s1 = streets[i];
+            const s2 = streets[j];
+
+            for (const point1 of s1.coordinates) {
+                if (s2.coordinates.some(point2 => JSON.stringify(point1) === JSON.stringify(point2))) {
+                    intersections.push({ streets: [s1, s2], coordinates: point1 });
+                }
+            }
+        }
+    }
+
+    return intersections;
+}
+
+// Helper function: Check if two points are within a small distance
+function arePointsClose(point1, point2, threshold = 0.0005) {
+    const [lng1, lat1] = point1;
+    const [lng2, lat2] = point2;
+    return Math.sqrt((lng1 - lng2) ** 2 + (lat1 - lat2) ** 2) < threshold;
+}
 
 class Graph {
     constructor() {
@@ -104,47 +129,39 @@ class PriorityQueue {
     }
 }
 
-async function findEfficientPath(start, end, streetsWithWeights, connections) {
+async function findEfficientPath(start, end, streetsWithWeights) {
     const graph = new Graph();
+    const intersections = findIntersections(streetsWithWeights);
 
-    streetsWithWeights.forEach(street => {
-        graph.addNode(street.name);
+    streetsWithWeights.forEach((street, index) => {
+        graph.addNode(`Street ${index}`);
     });
 
     console.log('Graph Nodes:', graph.nodes);
 
-    connections.forEach(([street1, street2]) => {
-        const s1 = streetsWithWeights.find(s => s.name === street1);
-        const s2 = streetsWithWeights.find(s => s.name === street2);
+    intersections.forEach(({ streets, coordinates }) => {
+        const s1 = streetsWithWeights.indexOf(streets[0]);
+        const s2 = streetsWithWeights.indexOf(streets[1]);
 
-        if (s1 && s2) {
-            const weight = calculateCombinedWeight(s1, s2);
-            graph.addEdge(street1, street2, weight);
-            console.log(`Edge added: ${street1} -> ${street2}, Weight: ${weight}`);
+        if (s1 !== -1 && s2 !== -1) {
+            const weight = calculateCombinedWeight(streets[0], streets[1], coordinates);
+            graph.addEdge(`Street ${s1}`, `Street ${s2}`, weight);
+            console.log(`Edge added: Street ${s1} -> Street ${s2}, Weight: ${weight}`);
         }
     });
 
     console.log('Graph Edges:', graph.edges);
 
-    const path = graph.dijkstra(start.name, end.name);
+    const path = graph.dijkstra(`Street ${streetsWithWeights.indexOf(start)}`, `Street ${streetsWithWeights.indexOf(end)}`);
 
-    return path ? path : `No path found between ${start.name} and ${end.name}`;
+    return path ? path : `No path found between start and end`;
 }
 
-function calculateCombinedWeight(street1, street2) {
-    const length = calculateDistance(street1, street2);
-    const safety = calculateSafetyScore(street1.crimes);
+function calculateCombinedWeight(street1, street2, intersection) {
+    const safety = (calculateSafetyScore(street1.crimes) + calculateSafetyScore(street2.crimes)) / 2;
     const lengthWeight = 0.7;
     const safetyWeight = 0.3;
-    const normalizedLength = length / 1000;
-    const normalizedSafety = 1 - safety;
-    return (lengthWeight * normalizedLength) + (safetyWeight * normalizedSafety);
-}
-
-function calculateDistance(street1, street2) {
-    const latDiff = street1.latitude - street2.latitude;
-    const lngDiff = street1.longitude - street2.longitude;
-    return Math.sqrt(latDiff ** 2 + lngDiff ** 2);
+    return (lengthWeight * 0.5) + (safetyWeight * (1 - safety)); // Basic combined weight formula
 }
 
 function calculateSafetyScore(crimes) {
@@ -160,10 +177,10 @@ function calculateSafetyScore(crimes) {
 }
 
 async function main() {
-    const start = { name: 'Street A', latitude: 40.7128, longitude: -74.0060 };
-    const end = { name: 'Street H', latitude: 40.7195, longitude: -73.9998 };
+    const start = dummyStreets[0]; // Street A
+    const end = dummyStreets[dummyStreets.length - 1]; // Street E
 
-    const efficientPath = await findEfficientPath(start, end, dummyStreets, streetConnections);
+    const efficientPath = await findEfficientPath(start, end, dummyStreets);
     console.log('Efficient Path:', efficientPath);
 }
 
