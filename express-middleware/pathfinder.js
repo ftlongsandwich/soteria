@@ -182,6 +182,9 @@ async function main() {
 
     const efficientPath = await findEfficientPath(start, end, dummyStreets);
     console.log('Efficient Path:', efficientPath);
+    // console.log("hi")
 }
 
 main();
+
+module.exports = {findEfficientPath};
