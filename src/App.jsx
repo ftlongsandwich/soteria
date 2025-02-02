@@ -19,12 +19,47 @@ const INITIAL_CENTER = [
 
 const DEFAULT_SRC = [-79.370209, 43.794179]; // 33 Singer Court
 const DEFAULT_DST = [-79.319519, 43.809521]; // 50 Francine Drive
-const DUMMY_ROADS = [
-  [-79.365, 43.795],
-  [-79.355, 43.800],
-  [-79.345, 43.805],
-  [-79.335, 43.810],
-];
+
+const CRIMES = [
+  [37.207090,-80.394835],
+[37.207899, -80.394088],
+[37.22494138989071,-80.44604373815481],
+[37.22468376238384, -80.44610477614287],
+[37.24509082022556, -80.42251223196125],
+[37.24289906394921, -80.42771029148672],
+[37.203047936689295, -80.40043376079916],
+[37.19997434720324, -80.40999703010999],
+[37.2288970791743, -80.41421208592794],
+[37.24209675809583, -80.43109071846982],
+[37.23194618768775, -80.41423223381491],
+[37.23053547434785, -80.41470473381497],
+[37.223242045952574, -80.42073469429609],
+[37.22318212044118, -80.42111206265142],
+[37.22699908514492, -80.41764237428966],
+[37.2338365225918, -80.42038367428937],
+[37.20090307009028, -80.40951646079921],
+[37.22464727527925, -80.41856958080412],
+[37.226396986387485, -80.42061124545351],
+[37.22954776773673, -80.41520614826047],
+[37.227692482722716, -80.41672714545349],
+[37.22871292232948, -80.4145114914874],
+[37.235987648030395, -80.41844996079779],
+[37.225370516722265, -80.42159370127271],
+[37.2217283246874, -80.42371795709212],
+[37.219532170724705, -80.41552117351739],
+[37.22308154894083, -80.41895832907315],
+[37.21681048848885, -80.41676211612015],
+[37.22439756312956, -80.41933621476431],
+[37.22461383187835, -80.41861249148756],
+[37.23037758959702, -80.41981267773596],
+[37.225378358850804, -80.4385608877813],
+[37.228979155178585, -80.42700613196192],
+[37.2301147208848, -80.41487015894488],
+[37.23156414445456, -80.42481390312562],
+[37.22980498775216, -80.41849426441897],
+[37.22230413528011, -80.42545053196221],
+[37.23115298785922, -80.42266211661722],
+]
 
 const INITIAL_ZOOM = 26.13
 
@@ -36,6 +71,10 @@ function App() {
   
   const [src, setSrc] = useState(INITIAL_CENTER)
   const [dst, setDst] = useState(INITIAL_CENTER)
+  const [proxies, setProxies] = useState([
+    [-79.365, 43.795],
+    [-79.355, 43.800]
+  ])
 
   const [crim_coords, setCrimCoords] = useState([])
 
@@ -76,19 +115,20 @@ function App() {
     mapRef.current.addControl(new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl,
-      }).on('result', (selected) => {
+      }, 'top').on('result', (selected) => {
         console.log(selected.result)
         setSrc(selected.result.geometry.coordinates)
         // setRegion(selected.result.)
         console.log(1)
+        CRIMES.forEach(item => new mapboxgl.Marker().setLngLat([item[1],item[0]]).addTo(mapRef.current))
         
       mapRef.current.addControl(new MapboxGeocoder({
         accessToken: mapboxgl.accessToken,
         mapboxgl,
-      }).on('result', (selected) => {
+      }, 'top').on('result', (selected) => {
         console.log(selected.result.geometry.coordinates)
         setDst(selected.result.geometry.coordinates)
-        // drawRoute(src,DUMMY_ROADS,dst)
+        // drawRoute(src,proxies,dst)
         console.log(2)
         console.log(src)
         console.log(dst)
@@ -105,7 +145,7 @@ function App() {
     
     const drawRoute = async (start, waypoints, end) => {
       // if (start == undefined || end == undefined) {
-      //   drawRoute(src, DUMMY_ROADS, dst)
+      //   drawRoute(src, proxies, dst)
       // }
       // else {
         try {
@@ -164,7 +204,19 @@ function App() {
         }
       // }
     };
-    drawRoute(src, DUMMY_ROADS, dst);
+
+    axios.get('http://127.0.0.1:3000/', {
+      params: {
+        start_lng: src[0],
+        start_lat: src[1],
+        end_lng: dst[0],
+        end_lat: dst[1]
+      },
+      crossDomain:true
+    }).then((res) => {
+      setProxies(res.data)
+    })
+    drawRoute(src, proxies, dst);
   }, [dst]);
 
   return (
