@@ -1,0 +1,23 @@
+# Ignore .env files
+.env
+.env.*
+
+# Ignore virtual environment resources
+Lib/
+Include/
+Scripts/
+
+# Ignore Python bytecode files
+*.pyc
+*.pyo
+__pycache__/
+
+# Ignore IDE/editor-specific files (optional, but useful)
+.vscode/
+.idea/
+
+# Ignore other common system files
+.DS_Store
+Thumbs.db
+
+**/pyvenv.cfg
